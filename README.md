@@ -43,8 +43,12 @@ converted it to a proper date format to ensure data consistency. I renamed the S
 - Encourage weekend wellness programs or campaigns aligned with users’ natural activity peaks on Saturdays.
 - Use Target campaigns around users with medium/low sleep efficiency by promoting Leaf’s sleep tracking and mindfulness features. 
 
+## 🛠 Tools and Technologies
 
-I utilize Tableau Public for the rest of my analysis. I used the cleaned and merged data file that I created using R and imported into Tableau. Use the link below to view my work on Tableau. 
+- **Language**: R (tidyverse, ggplot2, dplyr, etc.)
+- **Visualization**: Tableau
+- **Platform**: RStudio
+
 
 https://public.tableau.com/views/Bellabeat_Case_Study_Analysis/Dashboard1?:language=en-US&:sid=&:redirect=auth&:display_count=n&:origin=viz_share_link
 
