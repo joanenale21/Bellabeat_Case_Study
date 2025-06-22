@@ -1,0 +1,85 @@
+#load required libraries
+library(tidyverse)
+library(lubridate)
+library(ggplot2)
+library(skimr)
+library(corrplot)
+
+#importing datasets
+daily_activity <- read_csv("/kaggle/input/fitbit/mturkfitbit_export_4.12.16-5.12.16/Fitabase Data 4.12.16-5.12.16/dailyActivity_merged.csv")
+sleep_day <- read_csv("/kaggle/input/fitbit/mturkfitbit_export_4.12.16-5.12.16/Fitabase Data 4.12.16-5.12.16/sleepDay_merged.csv")
+
+#Data inspection
+head(daily_activity)
+head(sleep_day)
+
+#check for missing or duplicated data
+#check for missing values
+sum(is.na(daily_activity))
+sum(is.na(sleep_day))
+
+#remove duplicate rows
+daily_activity <- distinct(daily_activity)
+sleep_day <- distinct(sleep_day)
+
+#format and clean date columns
+#Convert ActivityDate and SleepDay to proper date format 
+daily_activity <- daily_activity %>% 
+  mutate(ActivityDate = mdy(ActivityDate))
+
+sleep_day <- sleep_day %>% 
+  mutate(SleepDay = mdy_hms(SleepDay))
+
+#renaming SleepDay column to match the Acitvity date for smooth merging of data
+colnames(sleep_day)[colnames(sleep_day) == "SleepDay"] <- "ActivityDate"
+
+#merged the datasets
+merged_data <- merge(daily_activity, sleep_day, by = c("Id", "ActivityDate"))
+
+#Quick summary of merged data
+summary(merged_data)
+
+#add weekday column for trend analysis
+merged_data <- merged_data %>% 
+  mutate(Weekday = weekdays(ActivityDate))
+
+#creating new column for analysis which help answer key business questions
+merged_data <- merged_data %>% 
+  mutate(SleepHours = round(TotalMinutesAsleep / 60, 1),
+         MetStepGoal = if_else(TotalSteps >= 10000, "Yes", "No"),
+         DayofWeek = wday(ActivityDate, label = TRUE))
+
+#creating metrics relevant to Bellabeat Leaf features
+#Calculate sedentary vs. active minutes ratio
+merged_data <- merged_data %>% 
+  mutate(
+    ActiveMinutes = VeryActiveMinutes + FairlyActiveMinutes + LightlyActiveMinutes,
+    SedentaryRatio = SedentaryMinutes / (ActiveMinutes + 1) #Avoid division by zero
+  )
+
+#Categorize sleep efficiency
+merged_data <- merged_data %>% 
+  mutate(
+    SleepEfficiency = TotalMinutesAsleep / TotalTimeInBed,
+    SleepCategory = case_when(
+      SleepEfficiency >= 0.9 ~ "High",
+      SleepEfficiency >= 0.7 ~ "Medium",
+      TRUE ~ "Low"
+    )
+  )
+
+#Activity Trends
+merged_data %>% 
+  group_by(Weekday) %>% 
+  summarise(AvgSteps = mean(TotalSteps), na.rm = TRUE) %>% 
+  ggplot(aes(x = factor(Weekday, levels = c("Monday", "Tuesday", "Wednesday", "Thursday",
+                                            "Friday", "Saturday", "Sunday")), y = AvgSteps)) +
+  geom_col(fill = "steelblue") +
+  labs(title = "Average Steps by Weekday", x = "Day", y = "Steps") +
+  theme_minimal()
+
+  # Calculate correlations
+cor_matrix <- cor(merged_data[, c("TotalSteps", "TotalMinutesAsleep", "SedentaryMinutes")],
+                  use = "complete.obs")
+#visualize
+corrplot(cor_matrix, method = "number", type = "upper")
